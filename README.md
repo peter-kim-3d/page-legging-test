@@ -110,16 +110,10 @@ owner-tagged recommendations.
 Flags:
 - `--waterfall` — embed a chronological waterfall diagram (inline SVG, from the
   median-onLoad capture) into the report; also writes a standalone `.waterfall.svg`.
-- `--pdf` — also render the report to PDF (via the gstack make-pdf binary).
+- `--pdf` — also render the report to PDF. **Self-contained** (playwright-core +
+  marked + the installed Chrome) — no external tools. Set `CHROME_BIN` if Chrome
+  is not at the default macOS path.
 - `--name "X"` / `--out file.md` — report title / output path.
-
-**To PDF** (publication-quality): use the gstack `/make-pdf` skill, or any
-markdown-to-PDF tool:
-
-```bash
-# gstack make-pdf binary:
-"$P" generate --cover --toc .perf-runs/products.report.md .perf-runs/products.report.pdf
-```
 
 ---
 

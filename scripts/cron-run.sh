@@ -11,7 +11,7 @@
 #   LAGGING_ENDPOINT  CDP endpoint (default http://127.0.0.1:9222)
 #   LAGGING_NAME      report name (default run-<timestamp>)
 #   LAGGING_WATERFALL "1" (default) to embed a waterfall in Tier A reports, "0" to skip
-#   LAGGING_PDF       "1" to also emit a PDF (needs the make-pdf binary), "0" (default)
+#   LAGGING_PDF       "1" to also emit a PDF (self-contained via Chrome), "0" (default)
 #
 # Example crontab (every weekday at 9am):
 #   0 9 * * 1-5  cd /path/to/page-legging-test && LAGGING_URL="https://internal/page" ./scripts/cron-run.sh >> cron.log 2>&1

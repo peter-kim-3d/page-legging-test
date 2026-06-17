@@ -2,7 +2,7 @@
 // src/har-report.mjs — TIER A, multi-capture
 // Aggregate several HAR captures of the SAME page into one test-style report
 // (Markdown + sanitized JSON), with p50/p95 across captures and PASS/WARN/FAIL
-// performance assertions. Pipe the .md through scripts or /make-pdf for a PDF.
+// performance assertions. Use --pdf for a self-contained PDF (no external tools).
 //
 //   node src/har-report.mjs <har... | dir> [--name "Page"] [--out file.md]
 //
@@ -10,28 +10,16 @@
 // click Clear before each), then reload -> "Save all as HAR". Each HAR must be a
 // single fresh load. 5+ captures give a stable p50/p95.
 
-import { readdirSync, writeFileSync, mkdirSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
-import { execFileSync } from 'node:child_process';
 import { loadHar, buildStatusAudit, pct, median } from './har-core.mjs';
 import { diagnosePage } from './diagnose.mjs';
 import { buildSanitizedSummary } from './sanitize.mjs';
 import { buildWaterfallSvg } from './waterfall.mjs';
+import { renderMarkdownToPdf } from './pdf.mjs';
 
 const PHASES = ['blocked', 'dns', 'connect', 'ssl', 'send', 'wait', 'receive', 'total'];
 const BOOL_FLAGS = new Set(['pdf', 'waterfall', 'exit-code']); // flags that take no value
-
-// Locate the gstack make-pdf binary (for --pdf). Deterministic, no LLM.
-function findMakePdf() {
-  const candidates = [
-    process.env.MAKE_PDF_BIN,
-    join(process.cwd(), '.claude/skills/gstack/make-pdf/dist/pdf'),
-    join(homedir(), '.claude/skills/gstack/make-pdf/dist/pdf'),
-  ].filter(Boolean);
-  for (const c of candidates) { try { if (existsSync(c)) return c; } catch { /* ignore */ } }
-  return null;
-}
 
 // ---- args ----
 const positionals = [];
@@ -229,7 +217,7 @@ if (flags.waterfall) {
   writeFileSync(svgPath, wf.svg);
   // Embed the SVG inline: renders in the PDF (Chromium) and in VS Code preview.
   // The standalone .svg is written alongside for zoomable / GitHub viewing.
-  waterfallSection = `\n## Network waterfall (representative capture)\n\n<div class="waterfall">\n\n${wf.svg}\n\n</div>\n\n_Chronological request timeline. Phase colors: blocked / dns / connect / ssl / send / **wait (TTFB)** / receive. Dashed lines = DOMContentLoaded & onLoad. Representative = median-onLoad capture (${repFile}, ${Math.round(rep.pageMetrics.load)}ms). A request wave that only starts after a big asset finishes reveals a waterfall dependency. Zoomable SVG: ${svgPath.split('/').pop()}._\n`;
+  waterfallSection = `\n## Network waterfall (representative capture)\n\n${wf.svg}\n\n_Chronological request timeline. Phase colors: blocked / dns / connect / ssl / send / **wait (TTFB)** / receive. Dashed lines = DOMContentLoaded & onLoad. Representative = median-onLoad capture (${repFile}, ${Math.round(rep.pageMetrics.load)}ms). A request wave that only starts after a big asset finishes reveals a waterfall dependency. Zoomable SVG: ${svgPath.split('/').pop()}._\n`;
 }
 
 const MARK = { PASS: '🟢 PASS', WARN: '🟡 WARN', FAIL: '🔴 FAIL' };
@@ -310,23 +298,15 @@ const summary = buildSanitizedSummary({
 });
 writeFileSync(outJson, JSON.stringify(summary, null, 2));
 
-// ---- optional PDF (--pdf): deterministic, no LLM. Calls the make-pdf binary. ----
+// ---- optional PDF (--pdf): self-contained via playwright-core + marked. No LLM. ----
 let pdfOut = null;
 if (flags.pdf) {
-  const bin = findMakePdf();
   const target = outMd.replace(/\.md$/i, '.pdf');
-  if (!bin) {
-    console.error(`\n(--pdf) make-pdf binary not found. Generate manually:`);
-    console.error(`  <make-pdf> generate --cover --toc "${outMd}" "${target}"`);
-  } else {
-    try {
-      // Flags must come AFTER the positionals for this binary, else --toc
-      // swallows the input path.
-      execFileSync(bin, ['generate', outMd, target, '--cover', '--toc'], { stdio: 'inherit' });
-      pdfOut = target;
-    } catch (e) {
-      console.error(`(--pdf) PDF generation failed: ${e.message}`);
-    }
+  try {
+    await renderMarkdownToPdf(md, target, { title: name, date: stamp });
+    pdfOut = target;
+  } catch (e) {
+    console.error(`(--pdf) PDF generation failed: ${e.message}`);
   }
 }
 
@@ -337,7 +317,7 @@ for (const t of tests) console.log(`  [${t.result}] ${t.id} — ${t.name}`);
 console.log(`\nReport (Markdown): ${outMd}`);
 console.log(`Summary (sanitized JSON): ${outJson}`);
 if (pdfOut) console.log(`Report (PDF): ${pdfOut}`);
-else if (!flags.pdf) console.log('To PDF: re-run with --pdf, or use the /make-pdf skill on the .md.');
+else if (!flags.pdf) console.log('To PDF: re-run with --pdf (self-contained, no external tools).');
 
 // --exit-code: non-zero when overall is FAIL (for cron / CI gating).
 if (flags['exit-code']) process.exit(overall === 'FAIL' ? 1 : 0);
