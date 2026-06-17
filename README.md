@@ -10,21 +10,36 @@ Two paths are provided:
 | | Tier A (HAR) | Tier B (CDP, automated) |
 |---|---|---|
 | Method | Export a HAR from DevTools → analyze locally | Attach to a logged-in Chrome and measure N times |
-| Install | **None** (Node built-ins only) | `npm install` (playwright-core, no browser download) |
-| Repeatability | single snapshot | p50/p95 (repeated runs) |
+| Install | **None** for md/json analysis | `npm install` (playwright-core) |
+| Repeatability | single snapshot (or N HARs via `report`) | p50/p95 (repeated runs) |
 | Strength | fastest & safest, zero barrier | reusable, automated, precise |
 
 > Key metric: the suspect request's **`wait` (TTFB / server processing time)**. If it is ~6s, the backend is confirmed (not network or frontend).
 
+**Everything is self-contained and local — no LLM, no cloud, no external tools.** PDF is
+rendered in-repo (playwright-core + marked); there is no gstack / make-pdf dependency.
+
 ---
 
-## Install
+## Install & requirements
 
 ```bash
 cd page-legging-test
-npm install          # only needed for Tier B. Tier A runs with no install.
-npm test             # offline self-check (gate + decision tree)
+npm install          # for Tier B and for --pdf / --png output
+npm test             # offline self-check (gate + decision tree), no deps needed
 ```
+
+What needs what:
+
+| Output | Needs |
+|---|---|
+| HAR analysis: `.md` / `.json` (analyze, report) | **nothing** — pure Node, runs without `npm install` |
+| `.pdf` report (`--pdf`) | `npm install` (marked) **+ a local Chrome** |
+| waterfall `.png` (`--png`) | `npm install` (playwright-core) **+ a local Chrome** |
+| Tier B `measure` | `npm install` (playwright-core) **+ a local Chrome** |
+
+Chrome is found at the macOS default path; override with `CHROME_BIN=/path/to/chrome`.
+playwright-core does **not** download a browser — it drives the Chrome you already have.
 
 ---
 

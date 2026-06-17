@@ -2,8 +2,7 @@
 // Self-contained markdown -> PDF. Uses playwright-core (Chromium page.pdf(),
 // already a dependency) + marked (zero-dependency markdown parser). No external
 // tools, no gstack, no LLM. Inline SVG (the waterfall) passes through and renders.
-
-import { marked } from 'marked';
+// marked + playwright-core are imported lazily so the md/json path needs no deps.
 
 const escapeHtml = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -41,6 +40,7 @@ svg { max-width: 100%; height: auto; }
 export async function renderMarkdownToPdf(mdText, outPdf, opts = {}) {
   const title = opts.title || 'Report';
   const date = opts.date || '';
+  const { marked } = await import('marked');
   marked.setOptions({ gfm: true, breaks: false });
   const bodyHtml = marked.parse(mdText);
   const cover = opts.cover === false ? '' : `<div class="cover"><h1 class="cover-title">${escapeHtml(title)}</h1>${date ? `<div class="cover-date">${escapeHtml(date)}</div>` : ''}</div>`;

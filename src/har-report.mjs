@@ -16,7 +16,6 @@ import { loadHar, buildStatusAudit, pct, median } from './har-core.mjs';
 import { diagnosePage } from './diagnose.mjs';
 import { buildSanitizedSummary } from './sanitize.mjs';
 import { buildWaterfallSvg } from './waterfall.mjs';
-import { renderMarkdownToPdf } from './pdf.mjs';
 
 const PHASES = ['blocked', 'dns', 'connect', 'ssl', 'send', 'wait', 'receive', 'total'];
 const BOOL_FLAGS = new Set(['pdf', 'waterfall', 'exit-code']); // flags that take no value
@@ -303,6 +302,7 @@ let pdfOut = null;
 if (flags.pdf) {
   const target = outMd.replace(/\.md$/i, '.pdf');
   try {
+    const { renderMarkdownToPdf } = await import('./pdf.mjs'); // lazy: only --pdf needs marked
     await renderMarkdownToPdf(md, target, { title: name, date: stamp });
     pdfOut = target;
   } catch (e) {
