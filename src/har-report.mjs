@@ -307,6 +307,12 @@ if (flags.pdf) {
     pdfOut = target;
   } catch (e) {
     console.error(`(--pdf) PDF generation failed: ${e.message}`);
+    if (/Cannot find package|ERR_MODULE_NOT_FOUND/i.test(e.message)) {
+      console.error("   -> Dependencies missing. Run: npm install   (then re-run with --pdf)");
+    } else if (/Chrome|Chromium|executable|launch|CHROME_BIN|spawn/i.test(e.message)) {
+      console.error('   -> Chrome not found/launchable. Set CHROME_BIN="/full/path/to/chrome".');
+    }
+    console.error('   (The .md and .json above were still written.)');
   }
 }
 

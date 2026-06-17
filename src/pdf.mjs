@@ -47,8 +47,8 @@ export async function renderMarkdownToPdf(mdText, outPdf, opts = {}) {
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>${cover}${bodyHtml}</body></html>`;
 
   const { chromium } = await import('playwright-core');
-  const CHROME = process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  const { requireChrome } = await import('./chrome.mjs');
+  const browser = await chromium.launch({ executablePath: requireChrome(), headless: true });
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load' });

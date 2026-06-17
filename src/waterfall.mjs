@@ -113,8 +113,8 @@ export function buildWaterfallSvg(entries, pageMetrics = {}, opts = {}) {
 /** Rasterize an SVG string to PNG using the installed Chrome (playwright-core). */
 export async function rasterizeSvgToPng(svg, outPng, width, height) {
   const { chromium } = await import('playwright-core');
-  const CHROME = process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  const { requireChrome } = await import('./chrome.mjs');
+  const browser = await chromium.launch({ executablePath: requireChrome(), headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
     await page.setContent(`<!doctype html><html><body style="margin:0">${svg}</body></html>`, { waitUntil: 'load' });
