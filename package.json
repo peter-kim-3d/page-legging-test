@@ -1,0 +1,22 @@
+{
+  "name": "page-legging-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Web page rendering latency (lagging) diagnosis toolkit — layered bottleneck localization via HAR analysis (Tier A) and CDP-driven repeated measurement (Tier B). Security-first: raw auth data never leaves the machine; only a sanitized summary is shareable with AI.",
+  "scripts": {
+    "analyze": "node src/har-analyze.mjs",
+    "report": "node src/har-report.mjs",
+    "waterfall": "node src/har-waterfall.mjs",
+    "measure": "node src/measure.mjs",
+    "chrome": "bash scripts/launch-chrome.sh",
+    "cron": "bash scripts/cron-run.sh",
+    "test": "node src/selftest.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.49.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

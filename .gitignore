@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Raw captures (may contain cookies/tokens) and generated outputs — LOCAL ONLY, never commit.
+har/*.har
+har/*.json
+.perf-runs/
+
+# Tool / agent state (not part of the toolkit)
+.bkit/
+.gstack/
+
+# OS / editor
+.DS_Store
+*.log
