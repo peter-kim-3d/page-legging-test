@@ -125,10 +125,17 @@ owner-tagged recommendations.
 Flags:
 - `--waterfall` — embed a chronological waterfall diagram (inline SVG, from the
   median-onLoad capture) into the report; also writes a standalone `.waterfall.svg`.
-- `--pdf` — also render the report to PDF. **Self-contained** (playwright-core +
-  marked + the installed Chrome) — no external tools. Set `CHROME_BIN` if Chrome
-  is not at the default macOS path.
+- `--html` — also write a **self-contained `.html` report (no Chrome needed)**. Open
+  it in any browser and **Print (Cmd/Ctrl+P) → "Save as PDF"**. This is the most
+  reliable way to get a PDF on locked-down corporate machines.
+- `--pdf` — render a PDF directly via Chromium (`page.pdf()`). If Chrome cannot be
+  launched (common on managed machines), it **automatically falls back to writing the
+  `.html`** so you can print to PDF yourself. Set `CHROME_BIN` to point at your Chrome.
 - `--name "X"` / `--out file.md` — report title / output path.
+
+> **PDF on a corporate machine?** Prefer `--html` and print from your own browser.
+> Any automated PDF engine (ours, or gstack/make-pdf) launches headless Chrome, which
+> managed machines often block — the HTML-print path avoids that entirely.
 
 ---
 

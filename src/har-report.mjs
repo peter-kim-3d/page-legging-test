@@ -18,7 +18,7 @@ import { buildSanitizedSummary } from './sanitize.mjs';
 import { buildWaterfallSvg } from './waterfall.mjs';
 
 const PHASES = ['blocked', 'dns', 'connect', 'ssl', 'send', 'wait', 'receive', 'total'];
-const BOOL_FLAGS = new Set(['pdf', 'waterfall', 'exit-code']); // flags that take no value
+const BOOL_FLAGS = new Set(['pdf', 'html', 'waterfall', 'exit-code']); // flags that take no value
 
 // ---- args ----
 const positionals = [];
@@ -34,7 +34,7 @@ const flags = {};
   }
 }
 if (!positionals.length) {
-  console.error('Usage: node src/har-report.mjs <har... | dir> [--name "Page"] [--out file.md] [--pdf]');
+  console.error('Usage: node src/har-report.mjs <har... | dir> [--name "Page"] [--waterfall] [--html] [--pdf] [--out file.md]');
   process.exit(1);
 }
 
@@ -297,22 +297,43 @@ const summary = buildSanitizedSummary({
 });
 writeFileSync(outJson, JSON.stringify(summary, null, 2));
 
-// ---- optional PDF (--pdf): self-contained via playwright-core + marked. No LLM. ----
+// ---- optional HTML report (--html): self-contained, NO Chrome. Print -> Save as PDF. ----
+let htmlOut = null;
+async function writeHtml() {
+  const target = outMd.replace(/\.md$/i, '.html');
+  const { writeReportHtml } = await import('./pdf.mjs');
+  return writeReportHtml(md, target, { title: name, date: stamp });
+}
+if (flags.html) {
+  try { htmlOut = await writeHtml(); }
+  catch (e) {
+    console.error(`(--html) failed: ${e.message}`);
+    if (/Cannot find package|ERR_MODULE_NOT_FOUND/i.test(e.message)) console.error('   -> Dependencies missing. Run: npm install');
+  }
+}
+
+// ---- optional PDF (--pdf): Chromium page.pdf(); falls back to HTML if Chrome can't launch. ----
 let pdfOut = null;
 if (flags.pdf) {
   const target = outMd.replace(/\.md$/i, '.pdf');
   try {
-    const { renderMarkdownToPdf } = await import('./pdf.mjs'); // lazy: only --pdf needs marked
+    const { renderMarkdownToPdf } = await import('./pdf.mjs'); // lazy: only --pdf/--html need marked
     await renderMarkdownToPdf(md, target, { title: name, date: stamp });
     pdfOut = target;
   } catch (e) {
-    console.error(`(--pdf) PDF generation failed: ${e.message}`);
+    console.error(`(--pdf) Chrome PDF failed: ${e.message}`);
     if (/Cannot find package|ERR_MODULE_NOT_FOUND/i.test(e.message)) {
-      console.error("   -> Dependencies missing. Run: npm install   (then re-run with --pdf)");
-    } else if (/Chrome|Chromium|executable|launch|CHROME_BIN|spawn/i.test(e.message)) {
-      console.error('   -> Chrome not found/launchable. Set CHROME_BIN="/full/path/to/chrome".');
+      console.error('   -> Dependencies missing. Run: npm install');
+    } else {
+      // Chrome could not launch (common on locked-down corporate machines): write HTML instead.
+      try {
+        if (!htmlOut) htmlOut = await writeHtml();
+        console.error(`   -> Chrome could not launch. Wrote ${htmlOut} instead —`);
+        console.error('      open it in your browser and Print (Cmd/Ctrl+P) -> "Save as PDF".');
+      } catch (e2) {
+        console.error(`   -> HTML fallback also failed: ${e2.message}`);
+      }
     }
-    console.error('   (The .md and .json above were still written.)');
   }
 }
 
@@ -322,8 +343,9 @@ console.log(`Captures: ${captures.length} · Overall: ${overall} (${counts.PASS}
 for (const t of tests) console.log(`  [${t.result}] ${t.id} — ${t.name}`);
 console.log(`\nReport (Markdown): ${outMd}`);
 console.log(`Summary (sanitized JSON): ${outJson}`);
+if (htmlOut) console.log(`Report (HTML — open & Print → Save as PDF): ${htmlOut}`);
 if (pdfOut) console.log(`Report (PDF): ${pdfOut}`);
-else if (!flags.pdf) console.log('To PDF: re-run with --pdf (self-contained, no external tools).');
+if (!pdfOut && !htmlOut) console.log('For a shareable doc: add --html (print to PDF from your browser) or --pdf (needs a launchable Chrome).');
 
 // --exit-code: non-zero when overall is FAIL (for cron / CI gating).
 if (flags['exit-code']) process.exit(overall === 'FAIL' ? 1 : 0);

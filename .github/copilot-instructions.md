@@ -8,7 +8,7 @@ summary).
 ## Commands (all local, no LLM)
 
 - Single HAR:        `npm run analyze -- <file.har>`
-- Multi-HAR report:  `npm run report -- har/ --name "Page" --waterfall --pdf`
+- Multi-HAR report:  `npm run report -- har/ --name "Page" --waterfall --html`
 - Waterfall diagram: `npm run waterfall -- <file.har> --png`
 - Automated (CDP):   `npm run measure -- <url> --runs 10`  (run `./scripts/launch-chrome.sh` first)
 - Scheduled runner:  `npm run cron`  (Tier A if `har/` has HARs, else Tier B if `LAGGING_URL` is set)
@@ -41,6 +41,19 @@ trustworthy — say so before reporting anything else.
   `ai/PROMPT.md`).
 - Tier B never touches passwords/cookies — it attaches to the user's already-logged-in
   Chrome over a **localhost-only** CDP port.
+
+## Producing a shareable report (PDF / HTML) — locked-down machines
+
+- **Preferred (always works):** `npm run report -- har/ --waterfall --html`. This writes a
+  self-contained `.html` (no Chrome launch). Tell the user: open it in your browser and
+  **Print (Cmd/Ctrl+P) → "Save as PDF"**.
+- `--pdf` renders a PDF directly via headless Chromium. On managed/corporate machines
+  Chrome often cannot be launched by automation — if so, `--pdf` **auto-falls-back to the
+  `.html`**; guide the user to print it.
+- Do NOT reach for gstack/make-pdf or any cloud PDF service — they also need headless
+  Chrome and add an external dependency. The HTML-print flow is the robust answer.
+- If `--pdf` errors with "Dependencies missing", run `npm install`. If it's a Chrome
+  launch error, use `--html` (or set `CHROME_BIN`).
 
 ## When asked to investigate a slow page
 

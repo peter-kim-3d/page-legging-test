@@ -9,7 +9,7 @@ Full agent guidance (Copilot CLI and others): **`.github/copilot-instructions.md
 ## Commands
 
 - `npm run analyze -- <file.har>` — single HAR diagnosis
-- `npm run report -- har/ --waterfall --pdf` — multi-HAR test report (md + json + pdf)
+- `npm run report -- har/ --waterfall --html` — multi-HAR test report (md + json + html; open & Print → Save as PDF). Use `--pdf` if Chrome automation is allowed (auto-falls-back to html).
 - `npm run waterfall -- <file.har> --png` — chronological waterfall diagram
 - `npm run measure -- <url> --runs 10` — automated CDP (run `./scripts/launch-chrome.sh` first)
 - `npm run cron` — scheduled runner (Tier A from `har/`, else Tier B from `LAGGING_URL`)
