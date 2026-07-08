@@ -1,19 +1,16 @@
 # AGENTS.md
 
 Web page rendering-latency (lagging) diagnosis toolkit. Runs **100% locally — no LLM,
-no network, no API keys**. Localizes where page load time is spent (backend / network /
-payload / connection / client render) from Chrome captures.
+no network, no dependencies**. Workflow: test the page in Chrome → download the HAR →
+investigate. Localizes where page load time is spent (backend / network / payload /
+connection / client render).
 
 Full agent guidance (Copilot CLI and others): **`.github/copilot-instructions.md`**.
 
 ## Commands
 
-- `npm run analyze -- <file.har>` — single HAR diagnosis
-- `npm run report -- har/ --waterfall --html` — multi-HAR test report (md + json + html; open & Print → Save as PDF). Use `--pdf` if Chrome automation is allowed (auto-falls-back to html).
-- `npm run waterfall -- <file.har> --png` — chronological waterfall diagram
-- `npm run measure -- <url> --runs 10` — automated CDP (run `./scripts/launch-chrome.sh` first)
-- `npm run cron` — scheduled runner (Tier A from `har/`, else Tier B from `LAGGING_URL`)
-- `npm test` — self-test
+- `npm run analyze -- <file.har>` — HAR diagnosis (the "investigate" step)
+- `npm test` — offline self-test
 
 Input: `har/` · Output: `.perf-runs/`
 

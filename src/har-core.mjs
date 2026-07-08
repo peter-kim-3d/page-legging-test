@@ -1,6 +1,5 @@
 // src/har-core.mjs
-// Shared HAR parsing used by har-analyze (single capture) and har-report
-// (multi-capture aggregation). Pure functions only — no console / no output.
+// HAR parsing used by analyze.mjs. Pure functions only — no console / no output.
 
 import { readFileSync } from 'node:fs';
 import { stripUrl } from './sanitize.mjs';
@@ -82,33 +81,3 @@ export function loadHar(path) {
   };
   return { entries, docEntry, pageMetrics };
 }
-
-/** Status-code audit over a flat list of normalized entries (deduped by key). */
-export function buildStatusAudit(entries, navStatuses = []) {
-  const map = new Map();
-  for (const e of entries) {
-    const key = `${e.method} ${e.host}${e.path}`;
-    const prev = map.get(key);
-    if (!prev || (e.status >= 400 && prev.status < 400)) {
-      map.set(key, { method: e.method, host: e.host, path: e.path, status: e.status });
-    }
-  }
-  const all = [...map.values()];
-  const byClass = { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0, other: 0 };
-  for (const r of all) {
-    const c = Math.floor((r.status || 0) / 100);
-    byClass[c === 2 ? '2xx' : c === 3 ? '3xx' : c === 4 ? '4xx' : c === 5 ? '5xx' : 'other'] += 1;
-  }
-  const nonOk = all.filter((r) => r.status && (r.status < 200 || r.status >= 300));
-  const authFailures = all.filter((r) => AUTH_RE.test(r.path) && AUTH_FAIL_STATUS.has(r.status));
-  return { byClass, nonOk, authFailures, navStatuses: [...new Set(navStatuses)], totalUnique: all.length };
-}
-
-export const pct = (values, p) => {
-  const arr = values.filter((v) => typeof v === 'number');
-  if (!arr.length) return 0;
-  const s = [...arr].sort((a, b) => a - b);
-  const idx = Math.min(s.length - 1, Math.max(0, Math.ceil((p / 100) * s.length) - 1));
-  return s[idx];
-};
-export const median = (a) => pct(a, 50);

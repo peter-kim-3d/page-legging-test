@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// src/har-analyze.mjs — TIER A (single capture, zero runtime deps)
+// src/analyze.mjs — the "investigate" step (zero runtime deps).
 // Parse one Chrome-exported HAR, rank requests, localize the bottleneck per the
 // decision tree, and emit a SANITIZED summary safe to hand to an AI.
-// For multiple captures + a test-style report, use src/har-report.mjs.
 //
-//   node src/har-analyze.mjs <path-to.har> [--top 15] [--out file.json]
+//   node src/analyze.mjs <path-to.har> [--top 15] [--out file.json]
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -18,7 +17,7 @@ function padL(s, w) { s = String(s); return s.length >= w ? s : ' '.repeat(w - s
 
 const harPath = process.argv[2];
 if (!harPath || harPath.startsWith('--')) {
-  console.error('Usage: node src/har-analyze.mjs <path-to.har> [--top 15] [--out file.json]');
+  console.error('Usage: node src/analyze.mjs <path-to.har> [--top 15] [--out file.json]');
   process.exit(1);
 }
 const topN = parseInt(arg('--top', '15'), 10);
@@ -57,7 +56,7 @@ const audit = buildStatusAudit(entries, docEntry);
 const warnings = buildWarnings(audit);
 
 // ---- console report ----
-console.log('\n=== Lagging diagnosis (Tier A / HAR) ===');
+console.log('\n=== Lagging diagnosis ===');
 console.log(`Source: ${harPath}`);
 console.log(`Requests: ${pageMetrics.totalRequests}  ·  onLoad: ${Math.round(pageMetrics.load)}ms  ·  transfer: ${(pageMetrics.transferBytes / 1024).toFixed(0)}KB`);
 if (warnings.length) {

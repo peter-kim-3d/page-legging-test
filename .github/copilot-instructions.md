@@ -1,20 +1,16 @@
 # Copilot instructions — web lagging diagnosis toolkit
 
 This repo localizes **where a web page's load time is spent** (backend / network /
-payload / connection / client render) from Chrome captures. It runs **100% locally —
-no LLM, no network, no API keys** (an AI is optional, only for narrating the sanitized
-summary).
+payload / connection / client render). It runs **100% locally — no LLM, no network,
+no dependencies** (an AI is optional, only for narrating the sanitized summary).
 
-## Commands (all local, no LLM)
+## Workflow (three steps)
 
-- Single HAR:        `npm run analyze -- <file.har>`
-- Multi-HAR report:  `npm run report -- har/ --name "Page" --waterfall --html`
-- Waterfall diagram: `npm run waterfall -- <file.har> --png`
-- Automated (CDP):   `npm run measure -- <url> --runs 10`  (run `./scripts/launch-chrome.sh` first)
-- Scheduled runner:  `npm run cron`  (Tier A if `har/` has HARs, else Tier B if `LAGGING_URL` is set)
-- Self-test:         `npm test`
+1. **Test in Chrome** — the user loads the slow page with DevTools → Network recording (Disable cache).
+2. **Download the file** — right-click the Network panel → Save all as HAR → `har/page.har`.
+3. **Investigate** — `npm run analyze -- har/page.har` (or `node src/analyze.mjs har/page.har`).
 
-Input HARs go in `har/`. All outputs go in `.perf-runs/`.
+Input HARs go in `har/`. All outputs go in `.perf-runs/`. Self-test: `npm test`.
 
 ## How it classifies a bottleneck (decision tree)
 
@@ -39,37 +35,19 @@ trustworthy — say so before reporting anything else.
   sanitizer (`src/sanitize.mjs`) strips headers/cookies/tokens/query/bodies and enforces an
   `assertNoSensitive()` gate. When an AI write-up is wanted, feed ONLY that file (see
   `ai/PROMPT.md`).
-- Tier B never touches passwords/cookies — it attaches to the user's already-logged-in
-  Chrome over a **localhost-only** CDP port.
-
-## Producing a shareable report (PDF / HTML) — locked-down machines
-
-- **Preferred (always works):** `npm run report -- har/ --waterfall --html`. This writes a
-  self-contained `.html` (no Chrome launch). Tell the user: open it in your browser and
-  **Print (Cmd/Ctrl+P) → "Save as PDF"**.
-- `--pdf` renders a PDF directly via headless Chromium. On managed/corporate machines
-  Chrome often cannot be launched by automation — if so, `--pdf` **auto-falls-back to the
-  `.html`**; guide the user to print it.
-- Do NOT reach for gstack/make-pdf or any cloud PDF service — they also need headless
-  Chrome and add an external dependency. The HTML-print flow is the robust answer.
-- If `--pdf` errors with "Dependencies missing", run `npm install`. If it's a Chrome
-  launch error, use `--html` (or set `CHROME_BIN`).
 
 ## When asked to investigate a slow page
 
-1. Check inputs: HARs in `har/`, or a target URL + a running authenticated Chrome.
-2. Run `npm run report` (Tier A) or `npm run measure` (Tier B).
+1. Check inputs: a HAR in `har/` (if none, walk the user through steps 1–2 above).
+2. Run `npm run analyze -- <file.har>`.
 3. Read the warnings (auth/status) first.
 4. Report the top bottleneck by **layer + owner**, citing the concrete numbers. Do not
    invent or assume data the capture does not contain.
 
 ## Architecture (where things live)
 
+- `src/analyze.mjs` — the "investigate" CLI (ranking, diagnosis, sanitized summary)
+- `src/har-core.mjs` — HAR parsing
 - `src/diagnose.mjs` — the decision-tree classifier (the reusable core)
 - `src/sanitize.mjs` — the security hard-gate (AI-shareable summary)
-- `src/har-core.mjs` — shared HAR parsing
-- `src/har-analyze.mjs` / `har-report.mjs` / `har-waterfall.mjs` — Tier A tools
-- `src/measure.mjs` — Tier B (CDP) tool
-- `src/waterfall.mjs` — SVG waterfall builder
-- `scripts/launch-chrome.sh` — open Chrome with a debug port (keeps auth)
-- `scripts/cron-run.sh` — scheduled runner
+- `src/selftest.mjs` — offline self-check (`npm test`)

@@ -1,17 +1,16 @@
 # har/ — put your HAR captures here
 
-Export HARs from Chrome DevTools into this folder, then run the report:
+Export a HAR from Chrome DevTools into this folder, then investigate:
 
 ```bash
-node src/har-report.mjs har/ --name "My Page" --waterfall --pdf
+node src/analyze.mjs har/page.har
 ```
 
 ## Capture protocol (clean, no leftover)
 
-1. DevTools (F12) → **Network** tab
-2. Turn **Preserve log OFF** (so each reload resets the buffer) — or click **Clear** (🚫) before each
-3. Reload the page → right-click → **Save all as HAR** → save here as e.g. `cap-1.har`
-4. Repeat 5+ times for stable p50/p95
+1. DevTools (F12) → **Network** tab, check **Disable cache**
+2. Turn **Preserve log OFF** (so each reload resets the buffer) — or click **Clear** (🚫) before reloading
+3. Reload the page → right-click → **Save all as HAR** → save here as e.g. `page.har`
 
 ## Security
 
