@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// src/analyze.mjs — the "investigate" step (zero runtime deps).
+// src/analyze.mjs — the "investigate" step.
 // Parse one Chrome-exported HAR, rank requests, localize the bottleneck per the
 // decision tree, and emit a SANITIZED summary safe to hand to an AI.
+// Console + .sanitized.json + --waterfall (svg) + --html need NO dependencies;
+// only --pdf needs `npm install` + a local Chrome (auto-falls-back to --html).
 //
-//   node src/analyze.mjs <path-to.har> [--top 15] [--out file.json]
+//   node src/analyze.mjs <path-to.har> [--top 15] [--waterfall] [--html] [--pdf] [--out file.json]
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { basename } from 'node:path';
 import { loadHar, AUTH_RE, AUTH_FAIL_STATUS } from './har-core.mjs';
 import { classifyRequest, diagnosePage } from './diagnose.mjs';
 import { buildSanitizedSummary } from './sanitize.mjs';
+import { buildWaterfallSvg } from './waterfall.mjs';
+import { buildReportHtml, renderHtmlToPdf } from './report.mjs';
 
 function arg(flag, def) { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : def; }
 function pad(s, w) { s = String(s); return s.length >= w ? s.slice(0, w) : s + ' '.repeat(w - s.length); }
@@ -17,7 +21,7 @@ function padL(s, w) { s = String(s); return s.length >= w ? s : ' '.repeat(w - s
 
 const harPath = process.argv[2];
 if (!harPath || harPath.startsWith('--')) {
-  console.error('Usage: node src/analyze.mjs <path-to.har> [--top 15] [--out file.json]');
+  console.error('Usage: node src/analyze.mjs <path-to.har> [--top 15] [--waterfall] [--html] [--pdf] [--out file.json]');
   process.exit(1);
 }
 const topN = parseInt(arg('--top', '15'), 10);
@@ -116,3 +120,50 @@ const outFile = arg('--out', `.perf-runs/${basename(harPath).replace(/\.har$/i, 
 writeFileSync(outFile, JSON.stringify(summary, null, 2));
 console.log(`\nSaved AI-shareable summary (sanitized): ${outFile}`);
 console.log('   -> Share only this file with Copilot etc. Keep the raw HAR local.');
+
+// ---- optional artifacts: waterfall svg / html / pdf report ----
+const wantWaterfall = process.argv.includes('--waterfall');
+const wantHtml = process.argv.includes('--html');
+const wantPdf = process.argv.includes('--pdf');
+if (wantWaterfall || wantHtml || wantPdf) {
+  const base = `.perf-runs/${basename(harPath).replace(/\.har$/i, '')}`;
+  const { svg } = buildWaterfallSvg(entries, pageMetrics, {
+    title: `Network waterfall — ${basename(harPath)}`,
+    subtitle: `${entries.length} requests · onLoad ${Math.round(pageMetrics.load)}ms`,
+  });
+  if (wantWaterfall) {
+    writeFileSync(`${base}.waterfall.svg`, svg);
+    console.log(`Saved waterfall diagram: ${base}.waterfall.svg`);
+  }
+  if (wantHtml || wantPdf) {
+    const report = {
+      title: `Lagging diagnosis — ${basename(harPath).replace(/\.har$/i, '')}`,
+      sourcePath: harPath,
+      generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
+      pageMetrics,
+      audit,
+      warnings,
+      verdict,
+      ranked: ranked.map((e) => ({ ...e, cls: classifyRequest(e) })),
+      byWait,
+      waterfallSvg: svg,
+    };
+    const htmlFile = `${base}.report.html`;
+    const writeHtml = () => {
+      writeFileSync(htmlFile, buildReportHtml({ ...report, forPdf: false }));
+      console.log(`Saved HTML report: ${htmlFile}  (open in a browser · Print -> Save as PDF)`);
+    };
+    if (wantHtml) writeHtml();
+    if (wantPdf) {
+      const pdfFile = `${base}.report.pdf`;
+      try {
+        await renderHtmlToPdf(buildReportHtml({ ...report, forPdf: true }), pdfFile, { title: report.title });
+        console.log(`Saved PDF report: ${pdfFile}`);
+      } catch (e) {
+        console.error(`PDF rendering failed: ${e.message}`);
+        if (!wantHtml) writeHtml();
+        console.error('   -> Use the HTML report instead: open it and Print -> "Save as PDF".');
+      }
+    }
+  }
+}

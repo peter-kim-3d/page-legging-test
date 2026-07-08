@@ -1,12 +1,15 @@
 {
   "name": "page-legging-test",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
-  "description": "Web page rendering latency (lagging) diagnosis toolkit — test in Chrome, download the HAR, investigate where the time is leaking (backend / network / payload / connection / client). Zero dependencies; raw auth data never leaves the machine.",
+  "description": "Web page rendering latency (lagging) diagnosis toolkit — test in Chrome, download the HAR, investigate where the time is leaking (backend / network / payload / connection / client). Analysis/waterfall/html need no install; only --pdf needs playwright-core + a local Chrome. Raw auth data never leaves the machine.",
   "scripts": {
     "analyze": "node src/analyze.mjs",
     "test": "node src/selftest.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.49.0"
   },
   "engines": {
     "node": ">=18"
